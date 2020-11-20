@@ -1,0 +1,268 @@
+service:
+  name: expense-tracker
+
+plugins:
+  - serverless-reqvalidator-plugin
+  - serverless-webpack
+  - serverless-iam-roles-per-function
+  - serverless-aws-documentation
+  - serverless-plugin-tracing
+provider:
+  name: aws
+  runtime: nodejs12.x
+  tracing: true
+  stage: ${opt:stage, 'dev'}
+  region: ${opt:region, 'ap-southeast-2'}
+  environment:
+    EXPENSE_TRACKER_TABLE: EXPENSE-TRACKER-${self:provider.stage}
+    IMAGES_S3_BUCKET: sls-expense-receipts-${self:provider.stage}
+    SIGNED_URL_EXPIRATION: 300
+
+custom:
+  documentation:
+    api:
+      info:
+        version: v1.0.0
+        title: ExpenseTracker API
+        description: Serverless application for expense tracker
+    models:
+      - name: CreateExpenseRequet
+        contentType: application/json
+        schema: ${file(schema/create-expense-request.json)}
+      - name: UpdateExpenseRequest
+        contentType: application/json
+        schema: ${file(schema/update-expense-request.json)}
+      - name: QueryExpenseRequest
+        contentType: application/json
+        schema: ${file(schema/query-expense-request.json)}
+
+functions:
+  GetExpenseItems:
+    handler: src/lambda/http/getExpenseItems.handler
+    events:
+      - http:
+          method: get
+          path: expenses
+          cors: true
+          authorizer:
+            name: authorizer
+            arn: arn:aws:cognito-idp:ap-southeast-2:304346242490:userpool/ap-southeast-2_SyGNbButR
+    iamRoleStatements:
+      - Effect: Allow
+        Action:
+          - dynamodb:Query
+        Resource: arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.EXPENSE_TRACKER_TABLE}
+      - Effect: 'Allow'
+        Action:
+          - 'xray:PutTraceSegments'
+          - 'xray:PutTelemetryRecords'
+        Resource:
+          - '*'
+
+  QueryExpenseItems:
+    handler: src/lambda/http/queryExpenseItems.handler
+    events:
+      - http:
+          method: post
+          path: query
+          cors: true
+          authorizer:
+            name: authorizer
+            arn: arn:aws:cognito-idp:ap-southeast-2:304346242490:userpool/ap-southeast-2_SyGNbButR
+          reqValidatorName: RequestBodyValidator
+          documentation:
+            summary: Query expense items
+            description: Query expense items
+            requestModels:
+              'application/json': QueryExpenseRequest
+    iamRoleStatements:
+      - Effect: Allow
+        Action:
+          - dynamodb:Query
+        Resource: arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.EXPENSE_TRACKER_TABLE}
+      - Effect: 'Allow'
+        Action:
+          - 'xray:PutTraceSegments'
+          - 'xray:PutTelemetryRecords'
+        Resource:
+          - '*'
+
+  CreateExpenseItem:
+    handler: src/lambda/http/createExpenseItem.handler
+    events:
+      - http:
+          method: post
+          path: expense
+          cors: true
+          authorizer:
+            name: authorizer
+            arn: arn:aws:cognito-idp:ap-southeast-2:304346242490:userpool/ap-southeast-2_SyGNbButR
+          reqValidatorName: RequestBodyValidator
+          documentation:
+            summary: Create a new expense item
+            description: Create a new expense item
+            requestModels:
+              'application/json': CreateExpenseRequet
+    iamRoleStatements:
+      - Effect: Allow
+        Action:
+          - dynamodb:PutItem
+        Resource: arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.EXPENSE_TRACKER_TABLE}
+      - Effect: 'Allow'
+        Action:
+          - 'xray:PutTraceSegments'
+          - 'xray:PutTelemetryRecords'
+        Resource:
+          - '*'
+  UpdateExpenseItem:
+    handler: src/lambda/http/updateExpenseItem.handler
+    events:
+      - http:
+          method: patch
+          path: expenses/{expenseId}
+          cors: true
+          authorizer:
+            name: authorizer
+            arn: arn:aws:cognito-idp:ap-southeast-2:304346242490:userpool/ap-southeast-2_SyGNbButR
+          reqValidatorName: RequestBodyValidator
+          documentation:
+            summary: Update expense item
+            description: Update expense item
+            requestModels:
+              'application/json': UpdateExpenseRequest
+    iamRoleStatements:
+      - Effect: Allow
+        Action:
+          - dynamodb:UpdateItem
+          - dynamodb:Query
+        Resource: arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.EXPENSE_TRACKER_TABLE}
+      - Effect: 'Allow'
+        Action:
+          - 'xray:PutTraceSegments'
+          - 'xray:PutTelemetryRecords'
+        Resource:
+          - '*'
+  DeleteExpenseItem:
+    handler: src/lambda/http/deleteExpenseItem.handler
+    events:
+      - http:
+          method: delete
+          path: expenses/{expenseId}
+          cors: true
+          authorizer:
+            name: authorizer
+            arn: arn:aws:cognito-idp:ap-southeast-2:304346242490:userpool/ap-southeast-2_SyGNbButR
+    iamRoleStatements:
+      - Effect: Allow
+        Action:
+          - dynamodb:DeleteItem
+          - dynamodb:Query
+        Resource: arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.EXPENSE_TRACKER_TABLE}
+      - Effect: Allow
+        Action:
+          - s3:DeleteObject
+        Resource: arn:aws:s3:::${self:provider.environment.IMAGES_S3_BUCKET}/*
+      - Effect: 'Allow'
+        Action:
+          - 'xray:PutTraceSegments'
+          - 'xray:PutTelemetryRecords'
+        Resource:
+          - '*'
+  GenerateUploadUrl:
+    handler: src/lambda/http/generateUploadUrl.handler
+    events:
+      - http:
+          method: post
+          path: expenses/{expenseId}/attachment
+          cors: true
+          authorizer:
+            name: authorizer
+            arn: arn:aws:cognito-idp:ap-southeast-2:304346242490:userpool/ap-southeast-2_SyGNbButR
+    iamRoleStatements:
+      - Effect: Allow
+        Action:
+          - dynamodb:UpdateItem
+          - dynamodb:Query
+        Resource: arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.EXPENSE_TRACKER_TABLE}
+      - Effect: Allow
+        Action:
+          - s3:PutObject
+          - s3:GetObject
+          - s3:DeleteObject
+        Resource: arn:aws:s3:::${self:provider.environment.IMAGES_S3_BUCKET}/*
+      - Effect: 'Allow'
+        Action:
+          - 'xray:PutTraceSegments'
+          - 'xray:PutTelemetryRecords'
+        Resource:
+          - '*'
+
+resources:
+  Resources:
+    RequestBodyValidator:
+      Type: AWS::ApiGateway::RequestValidator
+      Properties:
+        Name: 'request-body-validator'
+        RestApiId:
+          Ref: ApiGatewayRestApi
+        ValidateRequestBody: true
+        ValidateRequestParameters: false
+
+    GatewayResponseDefault4XX:
+      Type: AWS::ApiGateway::GatewayResponse
+      Properties:
+        ResponseParameters:
+          gatewayresponse.header.Access-Control-Allow-Origin: "'*'"
+          gatewayresponse.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+          gatewayresponse.header.Access-Control-Allow-Methods: "'GET,OPTIONS,POST'"
+        ResponseType: DEFAULT_4XX
+        RestApiId:
+          Ref: ApiGatewayRestApi
+
+    ExpenseTrackerTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        AttributeDefinitions:
+          - AttributeName: userId
+            AttributeType: S
+          - AttributeName: expenseId
+            AttributeType: S
+        KeySchema:
+          - AttributeName: userId
+            KeyType: HASH
+          - AttributeName: expenseId
+            KeyType: RANGE
+        BillingMode: PAY_PER_REQUEST
+        TableName: ${self:provider.environment.EXPENSE_TRACKER_TABLE}
+
+    AttachmentsBucket:
+      Type: AWS::S3::Bucket
+      Properties:
+        BucketName: ${self:provider.environment.IMAGES_S3_BUCKET}
+        CorsConfiguration:
+          CorsRules:
+            - AllowedOrigins:
+                - '*'
+              AllowedHeaders:
+                - '*'
+              AllowedMethods:
+                - GET
+                - PUT
+                - POST
+                - DELETE
+                - HEAD
+              MaxAge: 3000
+
+    BucketPolicy:
+      Type: AWS::S3::BucketPolicy
+      Properties:
+        PolicyDocument:
+          Id: MyPolicy
+          Version: '2012-10-17'
+          Statement:
+            - Sid: PublicReadForGetBucketObjects
+              Effect: Allow
+              Principal: '*'
+              Action: 's3:GetObject'
+              Resource: 'arn:aws:s3:::${self:provider.environment.IMAGES_S3_BUCKET}/*'
+        Bucket: !Ref AttachmentsBucket

@@ -1,0 +1,52 @@
+.expense-list-container {
+  margin: 10px;
+}
+
+.tag-container {
+}
+
+.tag {
+  background-color: #feac32;
+  padding: 2px 5px;
+  border-radius: 10px;
+  font-size: 14px;
+  color: white;
+  &:not(:last-child) {
+    margin-right: 10px;
+  }
+}
+
+.nav-link {
+  &.active {
+    color: blue !important;
+    text-decoration: underline !important;
+  }
+}
+
+.action-links {
+  display: flex;
+  a {
+    display: inline-block;
+  }
+  button {
+    padding: 0;
+    border: none;
+  }
+  :not(:last-child) {
+    margin-right: 10px;
+  }
+}
+
+.create-expense-form-container {
+  #amount {
+    width: 25%;
+  }
+}
+
+.date-format-label {
+  font-size: 12px;
+}
+
+.tags-help {
+  font-size: 12px;
+}

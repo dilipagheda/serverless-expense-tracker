@@ -1,0 +1,28 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "title": "query-expense-request",
+  "type": "object",
+  "properties": {
+    "fromDate": {
+      "type": "string",
+      "minLength": 10,
+      "maxLength": 10
+    },
+    "toDate": {
+      "type": "string",
+      "minLength": 10,
+      "maxLength": 10
+    },
+    "tags": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 2,
+        "maxLength": 10
+      },
+      "uniqueItems": true
+    }
+  },
+  "oneOf": [{ "required": ["fromDate", "toDate"] }, { "required": ["tags"] }],
+  "additionalProperties": false
+}

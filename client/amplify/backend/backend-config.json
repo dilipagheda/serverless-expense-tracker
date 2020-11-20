@@ -1,0 +1,11 @@
+{
+  "auth": {
+    "expensetrackerclient292df14d": {
+      "service": "Cognito",
+      "serviceType": "imported",
+      "providerPlugin": "awscloudformation",
+      "dependsOn": [],
+      "customAuth": false
+    }
+  }
+}
